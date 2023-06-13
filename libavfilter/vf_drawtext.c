@@ -183,6 +183,7 @@ typedef struct DrawTextContext {
     unsigned int fontsize;          ///< font size to use
     unsigned int default_fontsize;  ///< default font size to use
 
+    int letter_spacing;             ///< letter spacing in pixels
     int line_spacing;               ///< lines spacing in pixels
     short int draw_box;             ///< draw box around text - true or false
     int boxborderw;                 ///< box border width
@@ -237,7 +238,8 @@ static const AVOption drawtext_options[]= {
     {"shadowcolor", "set shadow color",     OFFSET(shadowcolor.rgba),   AV_OPT_TYPE_COLOR,  {.str="black"}, 0, 0, FLAGS},
     {"box",         "set box",              OFFSET(draw_box),           AV_OPT_TYPE_BOOL,   {.i64=0},     0,        1       , FLAGS},
     {"boxborderw",  "set box border width", OFFSET(boxborderw),         AV_OPT_TYPE_INT,    {.i64=0},     INT_MIN,  INT_MAX , FLAGS},
-    {"line_spacing",  "set line spacing in pixels", OFFSET(line_spacing),   AV_OPT_TYPE_INT,    {.i64=0},     INT_MIN,  INT_MAX,FLAGS},
+    {"letter_spacing", "set letter spacing in pixels", OFFSET(letter_spacing), AV_OPT_TYPE_INT, {.i64=0}, INT_MIN,  INT_MAX, FLAGS},
+    {"line_spacing",  "set line spacing in pixels", OFFSET(line_spacing),      AV_OPT_TYPE_INT, {.i64=0}, INT_MIN,  INT_MAX, FLAGS},
     {"fontsize",    "set font size",        OFFSET(fontsize_expr),      AV_OPT_TYPE_STRING, {.str=NULL},  0, 0 , FLAGS},
     {"x",           "set x expression",     OFFSET(x_expr),             AV_OPT_TYPE_STRING, {.str="0"},   0, 0, FLAGS},
     {"y",           "set y expression",     OFFSET(y_expr),             AV_OPT_TYPE_STRING, {.str="0"},   0, 0, FLAGS},
@@ -1036,7 +1038,7 @@ static int func_pts(AVFilterContext *ctx, AVBPrint *bp,
 
 static int func_frame_num(AVFilterContext *ctx, AVBPrint *bp,
                           char *fct, unsigned argc, char **argv, int tag)
-{
+{   
     DrawTextContext *s = ctx->priv;
 
     av_bprintf(bp, "%d", (int)s->var_values[VAR_N]);
@@ -1532,6 +1534,9 @@ continue_on_invalid2:
             x += delta.x >> 6;
         }
 
+        /* letter spacing */
+        x += s->letter_spacing;
+
         /* save position */
         s->positions[i].x = x + glyph->bitmap_left;
         s->positions[i].y = y - glyph->bitmap_top + y_max;
@@ -1539,7 +1544,7 @@ continue_on_invalid2:
         else              x += glyph->advance;
     }
 
-    max_text_line_w = FFMAX(x, max_text_line_w);
+    max_text_line_w = FFMAX(x, max_text_line_w) + s->letter_spacing;
 
     s->var_values[VAR_TW] = s->var_values[VAR_TEXT_W] = max_text_line_w;
     s->var_values[VAR_TH] = s->var_values[VAR_TEXT_H] = y + s->max_glyph_h;
