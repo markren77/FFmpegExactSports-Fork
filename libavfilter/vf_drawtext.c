@@ -183,7 +183,6 @@ typedef struct DrawTextContext {
     unsigned int fontsize;          ///< font size to use
     unsigned int default_fontsize;  ///< default font size to use
 
-    int letter_spacing;             ///< letter spacing in pixels
     int line_spacing;               ///< lines spacing in pixels
     short int draw_box;             ///< draw box around text - true or false
     int boxborderw;                 ///< box border width
@@ -209,6 +208,9 @@ typedef struct DrawTextContext {
     char   *a_expr;
     AVExpr *a_pexpr;
     int alpha;
+    char* letter_spacing_expr;      ///< expression for letter spacing
+    AVExpr* letter_spacing_pexpr;   ///< parsed expression for letter spacing
+    int letter_spacing;             ///< letter spacing in pixels
     AVLFG  prng;                    ///< random
     char       *tc_opt_string;      ///< specified timecode option string
     AVRational  tc_rate;            ///< frame rate for timecode
@@ -238,7 +240,7 @@ static const AVOption drawtext_options[]= {
     {"shadowcolor", "set shadow color",     OFFSET(shadowcolor.rgba),   AV_OPT_TYPE_COLOR,  {.str="black"}, 0, 0, FLAGS},
     {"box",         "set box",              OFFSET(draw_box),           AV_OPT_TYPE_BOOL,   {.i64=0},     0,        1       , FLAGS},
     {"boxborderw",  "set box border width", OFFSET(boxborderw),         AV_OPT_TYPE_INT,    {.i64=0},     INT_MIN,  INT_MAX , FLAGS},
-    {"letter_spacing", "set letter spacing in pixels", OFFSET(letter_spacing), AV_OPT_TYPE_INT, {.i64=0}, INT_MIN,  INT_MAX, FLAGS},
+    {"letter_spacing", "set letter spacing in pixels", OFFSET(letter_spacing_expr), AV_OPT_TYPE_STRING, {.str="0"}, 0, 0, FLAGS},
     {"line_spacing",  "set line spacing in pixels", OFFSET(line_spacing),      AV_OPT_TYPE_INT, {.i64=0}, INT_MIN,  INT_MAX, FLAGS},
     {"fontsize",    "set font size",        OFFSET(fontsize_expr),      AV_OPT_TYPE_STRING, {.str=NULL},  0, 0 , FLAGS},
     {"x",           "set x expression",     OFFSET(x_expr),             AV_OPT_TYPE_STRING, {.str="0"},   0, 0, FLAGS},
@@ -859,8 +861,9 @@ static av_cold void uninit(AVFilterContext *ctx)
     av_expr_free(s->y_pexpr);
     av_expr_free(s->a_pexpr);
     av_expr_free(s->fontsize_pexpr);
+    av_expr_free(s->letter_spacing_pexpr);
 
-    s->x_pexpr = s->y_pexpr = s->a_pexpr = s->fontsize_pexpr = NULL;
+    s->x_pexpr = s->y_pexpr = s->a_pexpr = s->fontsize_pexpr = s->letter_spacing_pexpr = NULL;
 
     av_freep(&s->positions);
     s->nb_positions = 0;
@@ -905,13 +908,16 @@ static int config_input(AVFilterLink *inlink)
     av_expr_free(s->x_pexpr);
     av_expr_free(s->y_pexpr);
     av_expr_free(s->a_pexpr);
-    s->x_pexpr = s->y_pexpr = s->a_pexpr = NULL;
+    av_expr_free(s->letter_spacing_pexpr);
+    s->x_pexpr = s->y_pexpr = s->a_pexpr = s->letter_spacing_pexpr = NULL;
 
     if ((ret = av_expr_parse(&s->x_pexpr, expr = s->x_expr, var_names,
                              NULL, NULL, fun2_names, fun2, 0, ctx)) < 0 ||
         (ret = av_expr_parse(&s->y_pexpr, expr = s->y_expr, var_names,
                              NULL, NULL, fun2_names, fun2, 0, ctx)) < 0 ||
         (ret = av_expr_parse(&s->a_pexpr, expr = s->a_expr, var_names,
+                             NULL, NULL, fun2_names, fun2, 0, ctx)) < 0 ||
+        (ret = av_expr_parse(&s->letter_spacing_pexpr, expr = s->letter_spacing_expr, var_names,
                              NULL, NULL, fun2_names, fun2, 0, ctx)) < 0) {
         av_log(ctx, AV_LOG_ERROR, "Failed to parse expression: %s \n", expr);
         return AVERROR(EINVAL);
@@ -1527,15 +1533,15 @@ continue_on_invalid2:
         dummy.fontsize = s->fontsize;
         glyph = av_tree_find(s->glyphs, &dummy, glyph_cmp, NULL);
 
+        /* letter spacing */
+        x += s->letter_spacing;
+
         /* kerning */
-        if (s->use_kerning && prev_glyph && glyph->code) {
+        if (s->letter_spacing == 0 && s->use_kerning && prev_glyph && glyph->code) {
             FT_Get_Kerning(s->face, prev_glyph->code, glyph->code,
                            ft_kerning_default, &delta);
             x += delta.x >> 6;
         }
-
-        /* letter spacing */
-        x += s->letter_spacing;
 
         /* save position */
         s->positions[i].x = x + glyph->bitmap_left;
@@ -1544,7 +1550,13 @@ continue_on_invalid2:
         else              x += glyph->advance;
     }
 
-    max_text_line_w = FFMAX(x, max_text_line_w) + s->letter_spacing;
+    s->letter_spacing = av_expr_eval(s->letter_spacing_pexpr, s->var_values, &s->prng);
+    if (s->letter_spacing<0) {
+        max_text_line_w = x+ s->letter_spacing;
+    }
+    else {
+        max_text_line_w = FFMAX(x, max_text_line_w) + s->letter_spacing;
+    }
 
     s->var_values[VAR_TW] = s->var_values[VAR_TEXT_W] = max_text_line_w;
     s->var_values[VAR_TH] = s->var_values[VAR_TEXT_H] = y + s->max_glyph_h;
