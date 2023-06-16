@@ -241,7 +241,7 @@ static const AVOption drawtext_options[]= {
     {"box",         "set box",              OFFSET(draw_box),           AV_OPT_TYPE_BOOL,   {.i64=0},     0,        1       , FLAGS},
     {"boxborderw",  "set box border width", OFFSET(boxborderw),         AV_OPT_TYPE_INT,    {.i64=0},     INT_MIN,  INT_MAX , FLAGS},
     {"letter_spacing", "set letter spacing in pixels", OFFSET(letter_spacing_expr), AV_OPT_TYPE_STRING, {.str="0"}, 0, 0, FLAGS},
-    {"line_spacing",  "set line spacing in pixels", OFFSET(line_spacing),      AV_OPT_TYPE_INT, {.i64=0}, INT_MIN,  INT_MAX, FLAGS},
+    {"line_spacing",  "set line spacing in pixels", OFFSET(line_spacing),   AV_OPT_TYPE_INT,    {.i64=0},     INT_MIN,  INT_MAX,FLAGS},
     {"fontsize",    "set font size",        OFFSET(fontsize_expr),      AV_OPT_TYPE_STRING, {.str=NULL},  0, 0 , FLAGS},
     {"x",           "set x expression",     OFFSET(x_expr),             AV_OPT_TYPE_STRING, {.str="0"},   0, 0, FLAGS},
     {"y",           "set y expression",     OFFSET(y_expr),             AV_OPT_TYPE_STRING, {.str="0"},   0, 0, FLAGS},
@@ -1537,7 +1537,7 @@ continue_on_invalid2:
         x += s->letter_spacing;
 
         /* kerning */
-        if (s->letter_spacing == 0 && s->use_kerning && prev_glyph && glyph->code) {
+        if (!s->letter_spacing && s->use_kerning && prev_glyph && glyph->code) {
             FT_Get_Kerning(s->face, prev_glyph->code, glyph->code,
                            ft_kerning_default, &delta);
             x += delta.x >> 6;
@@ -1553,8 +1553,7 @@ continue_on_invalid2:
     s->letter_spacing = av_expr_eval(s->letter_spacing_pexpr, s->var_values, &s->prng);
     if (s->letter_spacing < 0) {
         max_text_line_w = x+ s->letter_spacing;
-    }
-    else {
+    } else {
         max_text_line_w = FFMAX(x, max_text_line_w) + s->letter_spacing;
     }
 
