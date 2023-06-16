@@ -183,6 +183,7 @@ typedef struct DrawTextContext {
     unsigned int fontsize;          ///< font size to use
     unsigned int default_fontsize;  ///< default font size to use
 
+    int letter_spacing;             ///< letter spacing in pixels
     int line_spacing;               ///< lines spacing in pixels
     short int draw_box;             ///< draw box around text - true or false
     int boxborderw;                 ///< box border width
@@ -210,7 +211,6 @@ typedef struct DrawTextContext {
     int alpha;
     char* letter_spacing_expr;      ///< expression for letter spacing
     AVExpr* letter_spacing_pexpr;   ///< parsed expression for letter spacing
-    int letter_spacing;             ///< letter spacing in pixels
     AVLFG  prng;                    ///< random
     char       *tc_opt_string;      ///< specified timecode option string
     AVRational  tc_rate;            ///< frame rate for timecode
@@ -1551,7 +1551,7 @@ continue_on_invalid2:
     }
 
     s->letter_spacing = av_expr_eval(s->letter_spacing_pexpr, s->var_values, &s->prng);
-    if (s->letter_spacing<0) {
+    if (s->letter_spacing < 0) {
         max_text_line_w = x+ s->letter_spacing;
     }
     else {
