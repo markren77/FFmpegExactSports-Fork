@@ -816,7 +816,7 @@ static av_cold int init(AVFilterContext *ctx)
                        FT_STROKER_LINEJOIN_ROUND, 0);
     }
 
-    s->use_kerning = FT_HAS_KERNING(s->face);
+    s->use_kerning = FT_HAS_KERNING(s->face) && !s->letter_spacing;
 
     /* load the fallback glyph with code 0 */
     load_glyph(ctx, NULL, 0);
@@ -1537,7 +1537,7 @@ continue_on_invalid2:
         x += s->letter_spacing;
 
         /* kerning */
-        if (!s->letter_spacing && s->use_kerning && prev_glyph && glyph->code) {
+        if (s->use_kerning && prev_glyph && glyph->code) {
             FT_Get_Kerning(s->face, prev_glyph->code, glyph->code,
                            ft_kerning_default, &delta);
             x += delta.x >> 6;
