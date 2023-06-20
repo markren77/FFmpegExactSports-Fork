@@ -210,6 +210,7 @@ Codecs:
   mqc*                                  Nicolas Bertrand
   msmpeg4.c, msmpeg4data.h              Michael Niedermayer
   msrle.c                               Mike Melanson
+  msrleenc.c                            Tomas Härdin
   msvideo1.c                            Mike Melanson
   nuv.c                                 Reimar Doeffinger
   nvdec*, nvenc*                        Timo Rothenpieler
@@ -417,6 +418,7 @@ Muxers/Demuxers:
   dv.c                                  Roman Shaposhnik
   electronicarts.c                      Peter Ross
   epafdec.c                             Paul B Mahol
+  evc*                                  Samsung (Dawid Kozinski)
   ffm*                                  Baptiste Coudurier
   flic.c                                Mike Melanson
   flvdec.c                              Michael Niedermayer
@@ -432,6 +434,7 @@ Muxers/Demuxers:
   ipmovie.c                             Mike Melanson
   ircam*                                Paul B Mahol
   iss.c                                 Stefan Gehrer
+  jpegxl_anim_dec.c                     Leo Izen
   jpegxl_probe.*                        Leo Izen
   jvdec.c                               Peter Ross
   kvag.c                                Zane van Iperen
